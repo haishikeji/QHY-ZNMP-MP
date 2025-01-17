@@ -1,0 +1,98 @@
+package ${packageName}.admin.api.${moduleName};
+
+import java.util.List;
+
+import org.apache.ibatis.session.RowBounds;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
+
+import com.baomidou.mybatisplus.mapper.EntityWrapper;
+import com.baomidou.mybatisplus.mapper.Wrapper;
+import com.px.unimall.core.exception.ServiceException;
+import com.px.unimall.data.util.ExcelUtil;
+import ${packageName}.data.mapper.${moduleName}.${ClassName}Mapper;
+import ${packageName}.data.domain.${moduleName}.${ClassName};
+import ${packageName}.admin.api.${moduleName}.I${ClassName}Service;
+import com.px.unimall.data.model.Page;
+import java.util.Date;
+import org.springframework.transaction.annotation.Transactional;
+
+/**
+ * ${functionName}Service业务层处理
+ * 
+ * @author ${author}
+ * @date ${datetime}
+ */
+@Service
+public class ${ClassName}ServiceImpl implements I${ClassName}Service{
+	@Autowired
+	private ${ClassName}Mapper ${className}Mapper;
+	
+	@Override
+	public Boolean add(${ClassName} ${className},Long adminId) throws ServiceException {
+		Date now = new Date();
+		${className}.setGmtCreate(now);
+		${className}.setGmtUpdate(now);
+		${className}.setAdminId(adminId);
+		return ${className}Mapper.insert(${className})>0;
+	}
+
+	@Override
+	public Page<${ClassName}> list(#foreach ($column in $columns)#if($column.isQuery==1)$column.javaType $column.javaField,#end#end Integer page, Integer limit)throws ServiceException {
+		Wrapper<${ClassName}> wrapper = new EntityWrapper<${ClassName}>();
+		#foreach ($column in $columns)
+			#if($column.isQuery==1)
+				if (!StringUtils.isEmpty($column.javaField)) {
+					wrapper.eq("$column.columnName", $column.javaField);
+				}
+			#end
+		#end
+		wrapper.eq("delete_flag", 0);
+		List<${ClassName}> list = ${className}Mapper.selectPage(new RowBounds((page - 1) * limit, limit), wrapper);
+		Integer count = ${className}Mapper.selectCount(wrapper);
+		return new Page<${ClassName}>(list, page, limit, count);
+	}
+
+	@Override
+	@Transactional(rollbackFor = Exception.class)
+	public Boolean delete(String ${pkColumn.javaField}) {
+		String[] ids = String.valueOf(${pkColumn.javaField}).split(",");
+		for (String tt:ids) {
+			${ClassName} tmp =  ${className}Mapper.selectById(Long.parseLong(tt));
+			if(tmp != null){
+				tmp.setDeleteFlag(1);
+				${className}Mapper.updateById(tmp);
+			}
+		}
+		return true;
+	}
+
+	@Override
+	public Boolean update(${ClassName} ${className},Long adminId) throws ServiceException {
+		Date now = new Date();
+		${className}.setGmtUpdate(now);
+		${className}.setAdminId(adminId);
+		return ${className}Mapper.updateById(${className})>0;
+	}
+
+	@Override
+	public ${ClassName} get(${pkColumn.javaType} ${pkColumn.javaField}) throws ServiceException {
+		return ${className}Mapper.selectById(${pkColumn.javaField});
+	}
+	
+	@Override
+	public String export(#foreach ($column in $columns)#if($column.isQuery==1)$column.javaType $column.javaField,#end#end Integer page, Integer limit)throws ServiceException {
+		Wrapper<${ClassName}> wrapper = new EntityWrapper<${ClassName}>();
+		#foreach ($column in $columns)
+			#if($column.isQuery==1)
+				if (!StringUtils.isEmpty($column.javaField)) {
+					wrapper.eq("$column.columnName", $column.javaField);
+				}
+			#end
+		#end 
+		List<${ClassName}> list = ${className}Mapper.selectList(wrapper);
+		ExcelUtil<${ClassName}> util = new ExcelUtil<${ClassName}>(${ClassName}.class);
+		return util.exportExcel(list, "操作日志");
+	}
+}
